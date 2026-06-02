@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>🌙 Dreams I Want to Give Pudki</title>
+  <style>
+    :root {
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+    }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    body {
+      font-family: 'Georgia', 'Times New Roman', serif;
+      background: #0a0a1a;
+      overflow: hidden;
+      height: 100dvh;
+      width: 100vw;
+      position: fixed;
+      touch-action: manipulation;
+      -webkit-overflow-scrolling: none;
+    }
+    #app-container {
+      position: relative;
+      width: 100%;
+      height: 100dvh;
+      overflow: hidden;
+    }
+    .world {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 1.2s cubic-bezier(0.4,0,0.2,1), transform 1.2s cubic-bezier(0.4,0,0.2,1);
+      transform: scale(0.96);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .world.active {
+      opacity: 1;
+      pointer-events: all;
+      transform: scale(1);
+    }
+    .world.exit-left { opacity:0; transform:translateX(-30%) scale(0.9); }
+    .world.exit-right { opacity:0; transform:translateX(30%) scale(0.9); }
+    .world.enter-from-left { opacity:0; transform:translateX(-30%) scale(0.9); }
+    .world.enter-from-right { opacity:0; transform:translateX(30%) scale(0.9); }
+
+    canvas.world-canvas {
+      position: absolute;
+      top:0; left:0;
+      width:100%; height:100%;
+      pointer-events: none;
+      z-index:0;
+    }
+    .world-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      padding: 20px 20px 100px 20px; /* extra bottom padding to avoid nav overlap */
+      max-width: 500px;
+      width: 90%;
+      pointer-events: all;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .world-title {
+      font-size: clamp(1.4rem, 4vw, 2.2rem);
+      color: #fff;
+      margin-bottom: 8px;
+      letter-spacing: 0.04em;
+      text-shadow: 0 0 30px rgba(255,220,180,0.6);
+      font-weight: normal;
+      animation: titleGlow 3s ease-in-out infinite;
+    }
+    @keyframes titleGlow {
+      0%,100%{ text-shadow:0 0 20px rgba(255,220,180,0.4); }
+      50%{ text-shadow:0 0 50px rgba(255,220,180,0.9),0 0 80px rgba(255,180,140,0.5); }
+    }
+    .world-subtitle {
+      font-size: clamp(0.8rem, 2vw, 1rem);
+      color: rgba(255,220,200,0.75);
+      margin-bottom: 20px;
+      letter-spacing: 0.05em;
+      font-style: italic;
+    }
+
+    /* interaction grids */
+    .interact-grid {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: 18px;
+      width: 100%;
+      max-width: 400px;
+      margin-top: 10px;
+    }
+    .interact-circle {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 1 / 1;
+      max-width: 320px;
+      margin: 10px auto;
+    }
+    .interact-item {
+      cursor: pointer;
+      transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
+      filter: drop-shadow(0 0 8px rgba(255,200,150,0.5));
+      font-size: 2.2rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 50px;
+      height: 50px;
+    }
+    .interact-item:active {
+      filter: drop-shadow(0 0 20px rgba(255,240,200,1));
+      transform: scale(1.3);
+    }
+    .crystal-room {
+      cursor: pointer;
+      transition: all 0.5s;
+      padding: 8px 14px;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.25);
+      backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 0.85rem;
+      letter-spacing: 0.03em;
+      white-space: nowrap;
+    }
+    .crystal-room:active {
+      background: rgba(255,220,180,0.2);
+      border-color: rgba(255,200,150,0.6);
+      box-shadow: 0 0 20px rgba(255,180,130,0.5);
+    }
+    .train-window, .telescope-lens {
+      cursor: pointer;
+      border-radius: 12px;
+      transition: all 0.5s;
+      border: 2px solid rgba(255,255,255,0.25);
+      background: rgba(20,15,30,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.8rem;
+      width: 55px;
+      height: 55px;
+    }
+    .train-window:active, .telescope-lens:active {
+      border-color: #ffd4a8;
+      box-shadow: 0 0 20px rgba(255,180,120,0.6);
+      transform: scale(1.1);
+    }
+    .light-step {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background: rgba(255,220,180,0.25);
+      border: 2px solid rgba(255,200,150,0.4);
+      cursor: pointer;
+      transition: all 0.5s;
+    }
+    .light-step:active {
+      background: rgba(255,220,180,0.6);
+      box-shadow: 0 0 25px rgba(255,180,120,0.8);
+      transform: scale(1.2);
+    }
+
+    #nav-indicator {
+      position: fixed;
+      bottom: calc(20px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 6px 14px;
+      background: rgba(20,15,30,0.6);
+      border-radius: 28px;
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255,255,255,0.15);
+      max-width: 95vw;
+    }
+    #nav-indicator .dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.3);
+      transition: all 0.4s;
+      cursor: pointer;
+    }
+    #nav-indicator .dot.active { background:#ffd4a8; box-shadow:0 0 12px #ffd4a8; width:10px; height:10px; }
+    #nav-indicator .dot.visited { background: rgba(255,200,160,0.6); }
+
+    #nav-arrows {
+      position: fixed;
+      bottom: calc(70px + var(--safe-bottom));
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 100;
+      display: flex;
+      gap: 24px;
+    }
+    #nav-arrows button {
+      width: 42px; height: 42px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,0.3);
+      background: rgba(20,15,30,0.5);
+      color: #fff;
+      font-size: 1.3rem;
+      cursor: pointer;
+      backdrop-filter: blur(10px);
+      transition: 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    #nav-arrows button:active {
+      background: rgba(255,200,150,0.3);
+      border-color: #ffd4a8;
+      box-shadow: 0 0 15px rgba(255,180,130,0.5);
+    }
+
+    #portal-overlay {
+      position: fixed;
+      top:0; left:0; width:100%; height:100%;
+      pointer-events: none;
+      z-index:200;
+      opacity:0;
+      transition: opacity 0.6s;
+      background: radial-gradient(circle at center, rgba(255,200,150,0.2) 0%, rgba(20,10,30,0.95) 70%);
+    }
+    #portal-overlay.active { opacity:1; }
+
+    .reveal-message {
+      position: fixed;
+      top:50%; left:50%;
+      transform: translate(-50%,-50%) scale(0);
+      z-index:50;
+      pointer-events: none;
+      transition: all 0.7s cubic-bezier(0.34,1.56,0.64,1);
+      text-align: center;
+      padding: 18px 26px;
+      border-radius: 24px;
+      font-size: clamp(0.95rem, 3vw, 1.2rem);
+      color: #fff;
+      letter-spacing: 0.03em;
+      line-height: 1.6;
+      max-width: 85vw;
+      opacity:0;
+    }
+    .reveal-message.show { transform: translate(-50%,-50%) scale(1); opacity:1; }
+    .reveal-message.golden {
+      background: rgba(30,20,10,0.85);
+      border:1px solid rgba(255,200,140,0.5);
+      box-shadow:0 0 50px rgba(255,180,100,0.4),0 15px 40px rgba(0,0,0,0.5);
+      backdrop-filter: blur(20px);
+    }
+    .reveal-message.soft {
+      background: rgba(20,18,28,0.8);
+      border:1px solid rgba(200,180,220,0.4);
+      box-shadow:0 0 35px rgba(180,160,220,0.3);
+      backdrop-filter: blur(16px);
+    }
+    .reveal-message.warm {
+      background: rgba(25,18,12,0.85);
+      border:1px solid rgba(255,180,120,0.4);
+      box-shadow:0 0 40px rgba(255,160,80,0.35);
+      backdrop-filter: blur(16px);
+    }
+
+    .particles-layer { position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:1; }
+    .particle { position:absolute; border-radius:50%; pointer-events:none; animation:floatUp linear infinite; }
+    @keyframes floatUp {
+      0%{ transform:translateY(0) translateX(0) scale(1); opacity:0; }
+      10%{ opacity:1; }
+      90%{ opacity:1; }
+      100%{ transform:translateY(-110vh) translateX(30px) scale(0.3); opacity:0; }
+    }
+  </style>
+</head>
+<body>
+<div id="app-container"></div>
+<div id="portal-overlay"></div>
+<div id="nav-indicator"></div>
+<div id="nav-arrows">
+  <button id="btn-prev">◀</button>
+  <button id="btn-next">▶</button>
+</div>
+<div class="reveal-message golden" id="reveal-msg"></div>
+
+<script>
+(function(){
+  const appContainer = document.getElementById('app-container');
+  const portalOverlay = document.getElementById('portal-overlay');
+  const navIndicator = document.getElementById('nav-indicator');
+  const revealMsg = document.getElementById('reveal-msg');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+
+  let currentWorldIndex = 0;
+  let isTransitioning = false;
+  const totalWorlds = 12;
+  const visitedWorlds = new Set([0]);
+  let activeRevealTimeout = null;
+
+  const worldDefs = [
+    { id:'safety', title:'The Dream of Safety', subtitle:'You are safe with me.', bgClass:'world-bg-stars', emoji:'🌟' },
+    { id:'happiness', title:'The Dream of Happiness', subtitle:'Your happiness makes my world brighter.', bgClass:'world-bg-happy', emoji:'🌸' },
+    { id:'curiosity', title:'The Dream of Curiosity', subtitle:'I love discovering new things about you.', bgClass:'world-bg-curiosity', emoji:'🔍' },
+    { id:'admiration', title:'The Dream of Admiration', subtitle:'I admire who you are.', bgClass:'world-bg-admiration', emoji:'💎' },
+    { id:'moments', title:'The Dream of Small Moments', subtitle:'The little things matter.', bgClass:'world-bg-moments', emoji:'☕' },
+    { id:'adventures', title:'The Dream of Adventures', subtitle:'I want to experience life with you.', bgClass:'world-bg-adventures', emoji:'🚂' },
+    { id:'laughter', title:'The Dream of Laughter', subtitle:'Your laughter is precious.', bgClass:'world-bg-laughter', emoji:'🎪' },
+    { id:'trust', title:'The Dream of Trust', subtitle:'I trust you with my heart.', bgClass:'world-bg-trust', emoji:'🌉' },
+    { id:'forever', title:'The Dream of Forever', subtitle:'No matter how much time passes.', bgClass:'world-bg-forever', emoji:'⏳' },
+    { id:'heart', title:'The Dream of My Heart', subtitle:'This is how I truly feel.', bgClass:'world-bg-heart', emoji:'💖' },
+    { id:'futures', title:'The Dream of Possible Futures', subtitle:'Things I hope we experience.', bgClass:'world-bg-futures', emoji:'🔭' },
+    { id:'gratitude', title:'The Dream of Gratitude', subtitle:'Thank you for existing.', bgClass:'world-bg-gratitude', emoji:'✨' }
+  ];
+
+  const worldMessages = {
+    safety: ["You never have to face everything alone.","I'll always care about how you feel.","I want to be your safe place.","Rest here. You're home.","No matter what happens, you have me."],
+    happiness: ["Your smile could light up entire galaxies.","Seeing you happy makes my soul dance.","I'd do anything to hear you laugh.","You deserve all the joy in the universe.","Your happiness is my favorite thing.","You make every day brighter."],
+    curiosity: ["I want to know every story behind your eyes.","Every layer of you is fascinating.","Tell me your dreams, your fears, your favorite things.","I'll never stop being curious about you.","You're the most interesting person I've ever known."],
+    admiration: ["Your kindness changes lives.","The courage in your heart inspires me.","I admire how you see the world.","Your strength is beautiful.","You make goodness look effortless."],
+    moments: ["I dream of rainy mornings with you and coffee.","Walking beside you through quiet streets.","The way sunlight catches your eyes at golden hour.","Small moments with you feel like entire lifetimes.","Every ordinary second becomes precious with you."],
+    adventures: ["Let's chase northern lights together.","I want to get lost in foreign cities with you.","Every adventure is better with your hand in mine.","Let's write our story across the world.","The greatest adventure is simply being with you."],
+    laughter: ["Your laugh is the most beautiful sound I know.","I'd be silly every day just to hear it.","When you laugh, the whole world brightens.","Your joy is contagious and wonderful.","Never stop laughing, my love."],
+    trust: ["I trust you with my deepest self.","You hold my heart gently and safely.","With you, I can be completely real.","Trust is the bridge between our souls.","I believe in you, always."],
+    forever: ["Time may change many things, but not this.","Through every season, my heart stays yours.","Forever isn't long enough with you.","As years pass, my love only deepens.","One constant in this universe: my love for you."],
+    heart: ["I love you, baby.","I love your smile.","I love your heart.","I love your kindness.","I love your laugh.","I love who you are.","I choose you every day.","My heart chooses you.","Again. And again. And again.","Always."],
+    futures: ["Watching sunsets from every coast with you.","Building a home filled with warmth and laughter.","Celebrating your victories, big and small.","Growing old together, still holding hands.","A thousand tomorrows, all with you."],
+    gratitude: ["Thank you for existing.","Thank you for being you.","In every dream, in every universe,","I would still choose you."]
+  };
+
+  const worldElements = [];
+  const canvases = [];
+  const ctxs = [];
+  const animationData = [];
+
+  function createWorlds() {
+    worldDefs.forEach((def, i) => {
+      const worldEl = document.createElement('div');
+      worldEl.className = `world ${def.bgClass}`;
+      worldEl.id = `world-${i}`;
+      const canvas = document.createElement('canvas');
+      canvas.className = 'world-canvas';
+      worldEl.appendChild(canvas);
+      const content = document.createElement('div');
+      content.className = 'world-content';
+      content.innerHTML = `
+        <div class="world-title">${def.emoji} ${def.title}</div>
+        <div class="world-subtitle">${def.subtitle}</div>
+        <div class="world-interaction-area" id="interact-${i}"></div>
+      `;
+      worldEl.appendChild(content);
+      appContainer.appendChild(worldEl);
+      worldElements.push(worldEl);
+      canvases.push(canvas);
+      ctxs.push(canvas.getContext('2d'));
+      animationData.push({ particles:[], stars:[], clouds:[], lanterns:[], butterflies:[], sparkles:[], time:0 });
+    });
+    worldElements[0].classList.add('active');
+  }
+
+  function resizeCanvas(canvas) {
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * (window.devicePixelRatio||1);
+    canvas.height = rect.height * (window.devicePixelRatio||1);
+    canvas.style.width = rect.width+'px';
+    canvas.style.height = rect.height+'px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(window.devicePixelRatio||1, window.devicePixelRatio||1);
+  }
+  function resizeAll() { canvases.forEach(c=>resizeCanvas(c)); }
+  window.addEventListener('resize', resizeAll);
+
+  function initWorldParticles(idx) {
+    const data = animationData[idx];
+    const rect = worldElements[idx].getBoundingClientRect();
+    const w = rect.width, h = rect.height;
+    data.particles = []; data.stars = []; data.clouds = []; data.lanterns = []; data.butterflies = []; data.sparkles = [];
+    const count = Math.max(15, Math.floor((w*h)/20000));
+    for(let i=0;i<count;i++) {
+      data.particles.push({ x:Math.random()*w, y:Math.random()*h, r:Math.random()*2.5+0.5, speed:Math.random()*0.5+0.2, opacity:Math.random()*0.6+0.2, phase:Math.random()*Math.PI*2, drift:(Math.random()-0.5)*0.6 });
+    }
+    if(idx===0){
+      for(let i=0;i<25;i++) data.stars.push({ x:Math.random()*w, y:Math.random()*h*0.7, r:Math.random()*3+1.5, blinkSpeed:Math.random()*0.03+0.01, blinkPhase:Math.random()*Math.PI*2 });
+      for(let i=0;i<8;i++) data.clouds.push({ x:Math.random()*w, y:Math.random()*h*0.4+h*0.15, width:Math.random()*100+60, opacity:Math.random()*0.35+0.15, speed:Math.random()*0.3+0.1 });
+    }
+    if(idx===1) for(let i=0;i<18;i++) data.butterflies.push({ x:Math.random()*w, y:Math.random()*h, wingSize:Math.random()*7+4, speed:Math.random()*1.5+0.5, angle:Math.random()*Math.PI*2, flutterPhase:Math.random()*Math.PI*2, color:['#ff9ec8','#ffd4a8','#ffe0c0'][i%3] });
+    if(idx===3) for(let i=0;i<40;i++) data.sparkles.push({ x:Math.random()*w, y:Math.random()*h, r:Math.random()*2+0.5, sparkSpeed:Math.random()*0.04+0.02, phase:Math.random()*Math.PI*2 });
+    if(idx===9) for(let i=0;i<30;i++) data.lanterns.push({ x:Math.random()*w, y:Math.random()*h, r:Math.random()*5+3, speed:Math.random()*0.6+0.2, glow:Math.random()*25+15, flicker:Math.random()*Math.PI*2 });
+  }
+
+  // drawing functions (same as before, just compact)
+  function drawSafety(ctx,data,w,h,t){
+    const mx=w*0.5, my=h*0.28, mr=Math.min(w,h)*0.18, pulse=1+Math.sin(t*0.001)*0.04;
+    const grad=ctx.createRadialGradient(mx,my,mr*0.3,mx,my,mr*pulse*2.5);
+    grad.addColorStop(0,'rgba(255,240,210,0.95)'); grad.addColorStop(0.4,'rgba(255,220,170,0.7)'); grad.addColorStop(0.75,'rgba(255,180,120,0.2)'); grad.addColorStop(1,'rgba(255,150,80,0)');
+    ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(mx,my,mr*pulse*2.5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,235,200,0.9)'; ctx.beginPath(); ctx.arc(mx,my,mr*pulse,0,Math.PI*2); ctx.fill();
+    data.clouds.forEach(c=>{ c.x+=c.speed; if(c.x>w+150)c.x=-150; ctx.fillStyle=`rgba(220,210,240,${c.opacity})`; ctx.beginPath(); ctx.ellipse(c.x,c.y+Math.sin(t*0.0005+c.x)*8,c.width,c.width*0.4,0,0,Math.PI*2); ctx.fill(); });
+    data.stars.forEach(s=>{ const blink=0.4+0.6*Math.abs(Math.sin(t*s.blinkSpeed+s.blinkPhase)); ctx.fillStyle=`rgba(255,240,200,${blink})`; ctx.shadowColor=`rgba(255,220,150,${blink})`; ctx.shadowBlur=s.r*8; ctx.beginPath(); for(let i=0;i<5;i++){ const ang=i*Math.PI*2/5-Math.PI/2; const ix=s.x+Math.cos(ang)*s.r, iy=s.y+Math.sin(ang)*s.r; if(i===0)ctx.moveTo(ix,iy); else ctx.lineTo(ix,iy); const iang=ang+Math.PI/5; ctx.lineTo(s.x+Math.cos(iang)*s.r*0.4, s.y+Math.sin(iang)*s.r*0.4); } ctx.closePath(); ctx.fill(); ctx.shadowBlur=0; });
+    data.particles.forEach(p=>{ p.y-=p.speed; p.x+=p.drift; if(p.y<-10){p.y=h+10;p.x=Math.random()*w;} ctx.fillStyle=`rgba(255,220,180,${p.opacity})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); });
+  }
+  function drawHappiness(ctx,data,w,h,t){
+    for(let i=0;i<5;i++){ ctx.strokeStyle=['#ff9ec8','#ffd4a8','#ffe8a0','#b8f0c8','#d8b8f0'][i]; ctx.lineWidth=4; ctx.globalAlpha=0.4+Math.sin(t*0.002+i)*0.2; ctx.beginPath(); ctx.arc(w*0.5,h*0.85,h*0.5+i*25,Math.PI,0); ctx.stroke(); } ctx.globalAlpha=1;
+    data.butterflies.forEach(b=>{ b.x+=Math.cos(b.angle)*b.speed; b.y+=Math.sin(b.angle)*b.speed+Math.sin(t*0.003+b.flutterPhase)*0.5; b.angle+=(Math.random()-0.5)*0.03; if(b.x<-20)b.x=w+20; if(b.x>w+20)b.x=-20; if(b.y<-20)b.y=h+20; if(b.y>h+20)b.y=-20; const flap=Math.sin(t*0.015+b.flutterPhase)*0.5; ctx.fillStyle=b.color; ctx.beginPath(); ctx.ellipse(b.x-b.wingSize*(0.5+flap),b.y,b.wingSize*(0.6+flap*0.5),b.wingSize*0.4,-0.3,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.ellipse(b.x+b.wingSize*(0.5+flap),b.y,b.wingSize*(0.6+flap*0.5),b.wingSize*0.4,0.3,0,Math.PI*2); ctx.fill(); });
+  }
+  function drawCuriosity(ctx,data,w,h,t){ data.particles.forEach(p=>{ p.y-=p.speed*0.4; p.x+=Math.sin(t*0.001+p.phase)*0.5; if(p.y<-20){p.y=h+20;p.x=Math.random()*w;} ctx.fillStyle=`rgba(220,200,140,${p.opacity})`; ctx.shadowColor='rgba(255,220,150,0.5)'; ctx.shadowBlur=8; ctx.fillRect(p.x-3,p.y-8,6,16); ctx.fillRect(p.x-6,p.y+4,12,4); ctx.shadowBlur=0; }); }
+  function drawAdmiration(ctx,data,w,h,t){ data.sparkles.forEach(s=>{ const br=0.3+0.7*Math.abs(Math.sin(t*s.sparkSpeed+s.phase)); ctx.fillStyle=`rgba(255,255,255,${br})`; ctx.shadowColor=`rgba(200,180,255,${br})`; ctx.shadowBlur=s.r*6; ctx.beginPath(); ctx.moveTo(s.x,s.y-s.r*2); ctx.lineTo(s.x+s.r,s.y); ctx.lineTo(s.x,s.y+s.r*2); ctx.lineTo(s.x-s.r,s.y); ctx.closePath(); ctx.fill(); ctx.shadowBlur=0; }); }
+  function drawMoments(ctx,data,w,h,t){ data.particles.forEach(p=>{ p.y+=p.speed*1.5; p.x+=p.drift*0.3; if(p.y>h+10){p.y=-10;p.x=Math.random()*w;} ctx.strokeStyle=`rgba(200,200,230,${p.opacity*0.5})`; ctx.lineWidth=0.5; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(p.x+1,p.y+8); ctx.stroke(); }); }
+  function drawAdventures(ctx,data,w,h,t){ data.particles.forEach(p=>{ p.x-=p.speed*2; if(p.x<-10)p.x=w+10; ctx.fillStyle=`rgba(255,255,255,${p.opacity*0.5})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); }
+  function drawLaughter(ctx,data,w,h,t){ data.particles.forEach(p=>{ p.y+=p.speed*0.6; p.x+=Math.sin(t*0.005+p.phase)*2; if(p.y>h+20){p.y=-20;p.x=Math.random()*w;} ctx.fillStyle=`hsla(${(t*0.05+p.phase*100)%360},70%,70%,${p.opacity})`; ctx.fillRect(p.x-2,p.y-2,5,5); }); }
+  function drawTrust(ctx,data,w,h,t){ ctx.strokeStyle='rgba(255,220,180,0.5)'; ctx.lineWidth=3; ctx.shadowColor='rgba(255,200,150,0.6)'; ctx.shadowBlur=20; ctx.beginPath(); for(let x=0;x<w;x+=5){ const y=h*0.55+Math.sin(x*0.008+t*0.002)*12; if(x===0)ctx.moveTo(x,y); else ctx.lineTo(x,y); } ctx.stroke(); ctx.shadowBlur=0; data.particles.forEach(p=>{ p.y-=p.speed*0.3; p.x+=Math.sin(t*0.002+p.phase)*1; if(p.y<-30){p.y=h+30;p.x=Math.random()*w;} ctx.fillStyle=`rgba(255,255,255,${p.opacity*0.7})`; ctx.beginPath(); ctx.ellipse(p.x,p.y,p.r*2,p.r*0.6,0.2,0,Math.PI*2); ctx.fill(); }); }
+  function drawForever(ctx,data,w,h,t){ const cx=w*0.5,cy=h*0.45,cr=Math.min(w,h)*0.3; ctx.strokeStyle='rgba(255,220,180,0.4)'; ctx.lineWidth=2; ctx.beginPath(); ctx.arc(cx,cy,cr,0,Math.PI*2); ctx.stroke(); for(let i=0;i<20;i++){ const ang=t*0.0003+i*Math.PI*2/20; ctx.fillStyle='rgba(255,240,200,0.7)'; ctx.beginPath(); ctx.arc(cx+Math.cos(ang)*cr*0.8,cy+Math.sin(ang)*cr*0.6,2,0,Math.PI*2); ctx.fill(); } }
+  function drawHeart(ctx,data,w,h,t){ data.lanterns.forEach(l=>{ l.y-=l.speed; l.x+=Math.sin(t*0.002+l.flicker)*0.4; if(l.y<-30){l.y=h+30;l.x=Math.random()*w;} const fl=0.5+0.5*Math.sin(t*0.01+l.flicker); const grad=ctx.createRadialGradient(l.x,l.y,0,l.x,l.y,l.glow); grad.addColorStop(0,`rgba(255,200,140,${0.8*fl})`); grad.addColorStop(0.5,`rgba(255,160,100,${0.3*fl})`); grad.addColorStop(1,'rgba(255,120,60,0)'); ctx.fillStyle=grad; ctx.beginPath(); ctx.arc(l.x,l.y,l.glow,0,Math.PI*2); ctx.fill(); ctx.fillStyle=`rgba(255,220,170,${fl})`; ctx.beginPath(); ctx.arc(l.x,l.y,l.r,0,Math.PI*2); ctx.fill(); }); }
+  function drawFutures(ctx,data,w,h,t){ data.particles.forEach(p=>{ p.y-=p.speed*0.2; if(p.y<-5)p.y=h+5; const tw=0.3+0.7*Math.abs(Math.sin(t*0.008+p.phase)); ctx.fillStyle=`rgba(255,255,255,${tw*p.opacity})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); }); }
+  function drawGratitude(ctx,data,w,h,t){ const grad=ctx.createRadialGradient(w*0.5,h*0.4,10,w*0.5,h*0.4,Math.max(w,h)*0.6); grad.addColorStop(0,'rgba(255,220,170,0.4)'); grad.addColorStop(0.5,'rgba(255,180,130,0.15)'); grad.addColorStop(1,'rgba(0,0,0,0)'); ctx.fillStyle=grad; ctx.fillRect(0,0,w,h); data.particles.forEach(p=>{ p.y-=p.speed*0.35; p.x+=Math.sin(t*0.0015+p.phase)*0.6; if(p.y<-15){p.y=h+15;p.x=Math.random()*w;} ctx.fillStyle=`hsla(${(t*0.03+p.phase*50)%360},70%,75%,${p.opacity})`; ctx.beginPath(); ctx.arc(p.x,p.y,p.r*1.3,0,Math.PI*2); ctx.fill(); }); }
+
+  function drawWorld(idx,t){ if(worldElements[idx].classList.contains('active')||worldElements[idx].classList.contains('exit-left')||worldElements[idx].classList.contains('exit-right')){ const d=animationData[idx]; const w=worldElements[idx].getBoundingClientRect().width, h=worldElements[idx].getBoundingClientRect().height; if(w<1||h<1)return; ctxs[idx].clearRect(0,0,w,h); d.time=t; switch(idx){ case 0:drawSafety(ctxs[idx],d,w,h,t);break; case 1:drawHappiness(ctxs[idx],d,w,h,t);break; case 2:drawCuriosity(ctxs[idx],d,w,h,t);break; case 3:drawAdmiration(ctxs[idx],d,w,h,t);break; case 4:drawMoments(ctxs[idx],d,w,h,t);break; case 5:drawAdventures(ctxs[idx],d,w,h,t);break; case 6:drawLaughter(ctxs[idx],d,w,h,t);break; case 7:drawTrust(ctxs[idx],d,w,h,t);break; case 8:drawForever(ctxs[idx],d,w,h,t);break; case 9:drawHeart(ctxs[idx],d,w,h,t);break; case 10:drawFutures(ctxs[idx],d,w,h,t);break; case 11:drawGratitude(ctxs[idx],d,w,h,t);break; } } }
+  function animate(t){ worldDefs.forEach((_,i)=>drawWorld(i,t)); requestAnimationFrame(animate); }
+
+  // --- NON-COLLIDING INTERACTION LAYOUTS ---
+  function buildInteractions(idx) {
+    const area = document.getElementById(`interact-${idx}`);
+    if(!area) return;
+    area.innerHTML = '';
+    const msgs = Object.values(worldMessages)[idx];
+
+    const createItem = (emoji, msgIdx, extraClass='') => {
+      const el = document.createElement('div');
+      el.className = `interact-item ${extraClass}`;
+      el.textContent = emoji;
+      el.setAttribute('data-msg', msgIdx);
+      return el;
+    };
+
+    if(idx === 0) { // Safety: 5 stars in a pentagon
+      area.className = 'interact-circle';
+      const positions = [];
+      for(let i=0;i<5;i++) {
+        const angle = (i/5)*Math.PI*2 - Math.PI/2;
+        positions.push({ left: 50 + 35*Math.cos(angle) + '%', top: 50 + 35*Math.sin(angle) + '%' });
+      }
+      positions.forEach((pos,i)=>{
+        const star = createItem('⭐', i);
+        star.style.position='absolute';
+        star.style.left=pos.left; star.style.top=pos.top;
+        star.style.transform='translate(-50%,-50%)';
+        star.addEventListener('click',(e)=>{ e.stopPropagation(); revealStar(i,star); });
+        area.appendChild(star);
+      });
+    }
+    else if(idx === 1) { // Happiness: 6 flowers grid
+      area.className = 'interact-grid';
+      ['🌸','🌺','🌷','🌻','💐','🌼'].forEach((emo,i)=>{
+        const flower = createItem(emo, i);
+        flower.addEventListener('click',(e)=>{ e.stopPropagation(); revealFlower(i,flower); });
+        area.appendChild(flower);
+      });
+    }
+    else if(idx === 2) { // Curiosity: 2x3 grid
+      area.className = 'interact-grid';
+      ['🔑','📖','🚪','🗝️','📜','🔮'].forEach((emo,i)=>{
+        const obj = createItem(emo, i);
+        obj.addEventListener('click',(e)=>{ e.stopPropagation(); revealDiscovery(i,obj); });
+        area.appendChild(obj);
+      });
+    }
+    else if(idx === 3) { // Admiration: crystal rooms in a flex row
+      area.className = 'interact-grid';
+      ['Kindness','Courage','Smile','Laughter','Heart'].forEach((room,i)=>{
+        const el = document.createElement('div');
+        el.className = 'crystal-room';
+        el.textContent = `💎 ${room}`;
+        el.setAttribute('data-msg', i);
+        el.addEventListener('click',(e)=>{ e.stopPropagation(); revealCrystal(i,el); });
+        area.appendChild(el);
+      });
+    }
+    else if(idx === 4) { // Small Moments: 2x3 grid
+      area.className = 'interact-grid';
+      ['☕','📚','🌧️','💐','🕯️','🍂'].forEach((emo,i)=>{
+        const el = createItem(emo, i);
+        el.addEventListener('click',(e)=>{ e.stopPropagation(); revealMoment(i,el); });
+        area.appendChild(el);
+      });
+    }
+    else if(idx === 5) { // Adventures: train windows in a row
+      area.className = 'interact-grid';
+      ['🌟','🏔️','🍬','🌲','🌊'].forEach((emo,i)=>{
+        const win = document.createElement('div');
+        win.className = 'train-window';
+        win.textContent = emo;
+        win.addEventListener('click',(e)=>{ e.stopPropagation(); revealAdventure(i,win); });
+        area.appendChild(win);
+      });
+    }
+    else if(idx === 6) { // Laughter: carnival games grid
+      area.className = 'interact-grid';
+      ['🎯','🎪','🎠','🎡','🎈','🍿'].forEach((emo,i)=>{
+        const el = createItem(emo, i);
+        el.addEventListener('click',(e)=>{ e.stopPropagation(); revealLaughter(i,el); });
+        area.appendChild(el);
+      });
+    }
+    else if(idx === 7) { // Trust: light steps in a row
+      area.className = 'interact-grid';
+      for(let i=0;i<5;i++){
+        const step = document.createElement('div');
+        step.className = 'light-step';
+        step.addEventListener('click',(e)=>{ e.stopPropagation(); step.style.background='rgba(255,220,180,0.7)'; step.style.boxShadow='0 0 25px rgba(255,180,120,0.9)'; revealTrust(i,step); });
+        area.appendChild(step);
+      }
+    }
+    else if(idx === 8) { // Forever: single clock center
+      area.className = 'interact-circle';
+      const clock = document.createElement('div');
+      clock.style.cssText = 'width:70px;height:70px;border-radius:50%;background:rgba(255,200,150,0.3);border:3px solid rgba(255,180,130,0.6);cursor:pointer;position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);box-shadow:0 0 30px rgba(255,160,100,0.5);';
+      clock.addEventListener('click',(e)=>{ e.stopPropagation(); revealForever(clock); });
+      area.appendChild(clock);
+    }
+    else if(idx === 9) { // Heart: lanterns in a circle
+      area.className = 'interact-circle';
+      const lanternPositions = [];
+      for(let i=0;i<8;i++){
+        const angle = (i/8)*Math.PI*2;
+        lanternPositions.push({ left: 50 + 38*Math.cos(angle) + '%', top: 50 + 38*Math.sin(angle) + '%' });
+      }
+      lanternPositions.forEach((pos,i)=>{
+        const lantern = document.createElement('div');
+        lantern.className = 'interact-item';
+        lantern.textContent = '🏮';
+        lantern.style.position='absolute';
+        lantern.style.left=pos.left; lantern.style.top=pos.top;
+        lantern.style.transform='translate(-50%,-50%)';
+        lantern.addEventListener('click',(e)=>{ e.stopPropagation(); revealLantern(i,lantern); });
+        area.appendChild(lantern);
+      });
+    }
+    else if(idx === 10) { // Futures: telescopes row
+      area.className = 'interact-grid';
+      for(let i=0;i<5;i++){
+        const lens = document.createElement('div');
+        lens.className = 'telescope-lens';
+        lens.textContent = '🔭';
+        lens.addEventListener('click',(e)=>{ e.stopPropagation(); revealFuture(i,lens); });
+        area.appendChild(lens);
+      }
+    }
+    else if(idx === 11) { // Gratitude: full area tap
+      area.style.cssText = 'width:100%; height:120px; cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:2rem;';
+      area.textContent = '✨ Tap the sky ✨';
+      area.addEventListener('click',()=> revealGratitude());
+    }
+  }
+
+  function showMessage(text, style='golden') {
+    if(activeRevealTimeout) clearTimeout(activeRevealTimeout);
+    revealMsg.className = 'reveal-message '+style;
+    revealMsg.textContent = text;
+    revealMsg.classList.add('show');
+    activeRevealTimeout = setTimeout(()=> revealMsg.classList.remove('show'), 3200);
+  }
+
+  function revealStar(i,el){
+    const msg = worldMessages.safety[i];
+    el.style.transform = 'translate(-50%,-50%) scale(0.3)';
+    el.style.filter = 'drop-shadow(0 0 30px gold)';
+    setTimeout(()=>{ el.style.transform=''; el.style.filter=''; },1000);
+    showMessage('⭐ '+msg);
+  }
+  function revealFlower(i,el){
+    const msg = worldMessages.happiness[i];
+    el.style.transform = 'scale(1.5) rotate(15deg)';
+    setTimeout(()=> el.style.transform='',800);
+    showMessage('🌸 '+msg, 'warm');
+  }
+  function revealDiscovery(i,el){
+    const msg = worldMessages.curiosity[i];
+    el.style.transform = 'scale(1.4)';
+    setTimeout(()=> el.style.transform='',700);
+    showMessage('🔍 '+msg, 'soft');
+  }
+  function revealCrystal(i,el){
+    const msg = worldMessages.admiration[i];
+    el.style.background='rgba(255,220,200,0.25)';
+    el.style.boxShadow='0 0 20px rgba(255,200,150,0.6)';
+    setTimeout(()=>{ el.style.background=''; el.style.boxShadow=''; },1000);
+    showMessage('💎 '+msg, 'soft');
+  }
+  function revealMoment(i,el){
+    const msg = worldMessages.moments[i];
+    el.style.transform='scale(1.3)';
+    setTimeout(()=> el.style.transform='',700);
+    showMessage('☕ '+msg, 'warm');
+  }
+  function revealAdventure(i,el){
+    const msg = worldMessages.adventures[i];
+    el.style.borderColor='#ffd4a8'; el.style.boxShadow='0 0 20px rgba(255,180,120,0.7)';
+    setTimeout(()=>{ el.style.borderColor=''; el.style.boxShadow=''; },900);
+    showMessage('🚂 '+msg);
+  }
+  function revealLaughter(i,el){
+    const msg = worldMessages.laughter[i];
+    el.style.transform='scale(1.4) rotate(-10deg)';
+    setTimeout(()=> el.style.transform='',700);
+    showMessage('🎪 '+msg, 'warm');
+  }
+  function revealTrust(i,el){
+    const msg = worldMessages.trust[i];
+    el.style.transform='scale(1.3)';
+    setTimeout(()=>{ el.style.transform=''; el.style.background=''; el.style.boxShadow=''; },800);
+    showMessage('🌉 '+msg, 'soft');
+  }
+  function revealForever(el){
+    const msg = worldMessages.forever[Math.floor(Math.random()*worldMessages.forever.length)];
+    el.style.transform='translate(-50%,-50%) scale(1.4)';
+    el.style.boxShadow='0 0 50px rgba(255,180,100,0.9)';
+    setTimeout(()=>{ el.style.transform='translate(-50%,-50%)'; el.style.boxShadow=''; },1000);
+    showMessage('⏳ '+msg);
+  }
+  function revealLantern(i,el){
+    const msg = worldMessages.heart[i];
+    el.style.transform='translate(-50%,-50%) scale(0.2)';
+    el.style.filter='drop-shadow(0 0 40px gold)';
+    setTimeout(()=>{ el.style.transform=''; el.style.filter=''; },1200);
+    showMessage('💖 '+msg);
+  }
+  function revealFuture(i,el){
+    const msg = worldMessages.futures[i];
+    el.style.transform='scale(1.4)';
+    el.style.borderColor='#ffd4a8'; el.style.boxShadow='0 0 25px rgba(255,180,120,0.7)';
+    setTimeout(()=>{ el.style.transform=''; el.style.borderColor=''; el.style.boxShadow=''; },900);
+    showMessage('🔭 '+msg, 'soft');
+  }
+  function revealGratitude(){
+    showMessage('✨ ' + worldMessages.gratitude.join(' ✨ ') + ' ✨', 'golden');
+  }
+
+  // Navigation
+  function navigateTo(newIdx, dir='next'){
+    if(isTransitioning || newIdx===currentWorldIndex || newIdx<0 || newIdx>=totalWorlds) return;
+    isTransitioning=true;
+    portalOverlay.classList.add('active'); setTimeout(()=>portalOverlay.classList.remove('active'),700);
+    const oldWorld = worldElements[currentWorldIndex];
+    const newWorld = worldElements[newIdx];
+    oldWorld.classList.remove('active'); oldWorld.classList.add(dir==='next'?'exit-left':'exit-right');
+    newWorld.classList.remove('exit-left','exit-right','enter-from-left','enter-from-right');
+    newWorld.classList.add(dir==='next'?'enter-from-right':'enter-from-left');
+    void newWorld.offsetWidth;
+    requestAnimationFrame(()=>{
+      newWorld.classList.remove('enter-from-right','enter-from-left');
+      newWorld.classList.add('active');
+      oldWorld.classList.remove('exit-left','exit-right');
+    });
+    currentWorldIndex=newIdx; visitedWorlds.add(newIdx);
+    updateNavIndicator(); buildInteractions(newIdx); initWorldParticles(newIdx); resizeCanvas(canvases[newIdx]);
+    setTimeout(()=>{ isTransitioning=false; },1200);
+  }
+
+  function updateNavIndicator(){
+    navIndicator.innerHTML='';
+    worldDefs.forEach((def,i)=>{
+      const dot=document.createElement('span');
+      dot.className='dot';
+      if(i===currentWorldIndex) dot.classList.add('active');
+      if(visitedWorlds.has(i)) dot.classList.add('visited');
+      dot.title=def.title;
+      dot.addEventListener('click',()=>{ if(i!==currentWorldIndex&&!isTransitioning) navigateTo(i, i>currentWorldIndex?'next':'prev'); });
+      navIndicator.appendChild(dot);
+    });
+  }
+
+  btnPrev.addEventListener('click',()=>{ if(!isTransitioning&&currentWorldIndex>0) navigateTo(currentWorldIndex-1,'prev'); });
+  btnNext.addEventListener('click',()=>{ if(!isTransitioning&&currentWorldIndex<totalWorlds-1) navigateTo(currentWorldIndex+1,'next'); });
+
+  let touchStartX=0;
+  document.addEventListener('touchstart',e=>{ touchStartX=e.touches[0].clientX; },{passive:true});
+  document.addEventListener('touchend',e=>{
+    const dx=e.changedTouches[0].clientX-touchStartX;
+    if(Math.abs(dx)>50&&!isTransitioning){
+      if(dx<-40&&currentWorldIndex<totalWorlds-1) navigateTo(currentWorldIndex+1,'next');
+      else if(dx>40&&currentWorldIndex>0) navigateTo(currentWorldIndex-1,'prev');
+    }
+  });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='ArrowRight'&&currentWorldIndex<totalWorlds-1&&!isTransitioning) navigateTo(currentWorldIndex+1,'next');
+    else if(e.key==='ArrowLeft'&&currentWorldIndex>0&&!isTransitioning) navigateTo(currentWorldIndex-1,'prev');
+  });
+
+  createWorlds();
+  worldDefs.forEach((_,i)=>{ initWorldParticles(i); buildInteractions(i); });
+  resizeAll();
+  requestAnimationFrame(animate);
+  updateNavIndicator();
+})();
+</script>
+</body>
+</html>
